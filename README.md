@@ -1,6 +1,8 @@
-# QNN with RLGS-Inspired Features
+# QNN Edge Project
 
-A Quantum Neural Network (QNN) implementation demonstrating improvements from multiple quantum computing optimization techniques for toy classification tasks.
+## Optimizing QNN Training using RLGS, Qtenon, Qoncord, and Q-Edge Ideas (Simulated)
+
+A modular Quantum Neural Network (QNN) implementation demonstrating improvements from multiple quantum computing optimization techniques for toy classification tasks.
 
 ## Features
 
@@ -49,6 +51,28 @@ Layer 2: RX, RY, RZ rotations
 Measurement (PauliZ expectation values)
 ```
 
+## Project Structure
+
+```
+qnn_edge_project/
+├── data/                  # Dataset storage
+├── src/                   # Source code modules
+│   ├── model.py          # QNN ansatz + state preparation
+│   ├── train.py          # Training loop, latency simulation, restarts
+│   ├── rlgs_utils.py     # RLGS-inspired graph-state simplifier
+│   ├── qoncord.py        # Restart + promotion policy implementation
+│   ├── qedge_sim.py      # Edge-mode simulator (CPU/bandwidth constraints)
+│   └── utils.py          # Plotting, metrics
+├── notebooks/            # Jupyter experiments
+│   └── experiments.ipynb
+├── results/              # Training outputs
+│   └── figures/          # Generated plots
+├── report/               # Documentation
+│   └── final_report.md   # Comprehensive project report
+├── requirements.txt      # Dependencies
+└── README.md            # This file
+```
+
 ## Installation
 
 ```bash
@@ -65,10 +89,32 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Basic Training
+### Quick Start - Training Script
 
 ```bash
-python qnn_rlgs.py
+python src/train.py
+```
+
+### Interactive Notebook
+
+```bash
+jupyter notebook notebooks/experiments.ipynb
+```
+
+### Programmatic Usage
+
+```python
+from src import RLGS_QNN, train_qnn, prepare_toy_dataset, plot_training_metrics
+
+# Prepare data
+X_train, X_val, y_train, y_val = prepare_toy_dataset()
+
+# Initialize and train
+qnn = RLGS_QNN(n_qubits=4, n_layers=2)
+qnn = train_qnn(qnn, X_train, y_train, X_val, y_val, epochs=30)
+
+# Visualize results
+plot_training_metrics(qnn.training_history)
 ```
 
 This will:
@@ -104,26 +150,44 @@ The training process generates `training_metrics.png` with 6 subplots:
 5. **Loop Latency** - Qtenon loop execution time
 6. **Constraint Utilization** - Q-Edge resource usage
 
-## Key Components
+## Key Modules
 
-### `RLGSGraphStateSimplifier`
-Analyzes and simplifies qubit connectivity graphs to minimize CZ gates while maintaining expressiveness.
-
-### `QtenonLowLatencyLoop`
-Simulates tight classical-quantum integration with configurable latency (default: 0.5ms).
-
-### `QoncordScheduler`
-Implements restart-based learning rate scheduling with promotion for improved losses.
-
-### `QEdgeConstraints`
-Enforces resource constraints (max 50 gates, depth 10) suitable for edge devices.
-
-### `RLGS_QNN`
-Main QNN class integrating all components with:
-- Parameterized quantum circuits
+### `src/model.py` - RLGS_QNN
+Main QNN class integrating all optimization components:
+- Parameterized quantum circuits with state preparation
+- RLGS-simplified entanglement patterns
 - Training with numerical gradient descent
 - Comprehensive metrics tracking
-- Visualization capabilities
+
+### `src/rlgs_utils.py` - RLGSGraphStateSimplifier
+Analyzes and simplifies qubit connectivity graphs:
+- Builds adjacency matrices from qubit pairs
+- Applies heuristics to minimize CZ gates
+- Returns optimized linear connectivity pattern
+
+### `src/qedge_sim.py` - QEdgeConstraints & QtenonLowLatencyLoop
+Edge-mode simulation and low-latency loop:
+- Enforces resource limits (max gates, depth)
+- Simulates classical-quantum feedback latency
+- Tracks constraint satisfaction metrics
+
+### `src/qoncord.py` - QoncordScheduler
+Adaptive learning rate scheduling:
+- Promotes LR on loss improvement
+- Periodic restarts with cosine annealing
+- Helps escape local minima
+
+### `src/train.py` - Training Loop
+Complete training procedure:
+- Dataset preparation (Iris binary classification)
+- Training loop with all optimizations
+- Validation and metrics collection
+
+### `src/utils.py` - Plotting & Metrics
+Visualization and reporting utilities:
+- Training metrics plots (loss, accuracy, LR, etc.)
+- Comparison visualizations
+- Summary statistics printing
 
 ## Customization
 

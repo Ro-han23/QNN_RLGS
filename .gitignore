@@ -28,7 +28,12 @@ env.bak/
 venv.bak/
 *.log
 .DS_Store
-results/
+results/figures/*.png
+results/figures/*.jpg
+results/figures/*.jpeg
 *.png
 *.jpg
 *.jpeg
+.ipynb_checkpoints/
+data/*
+!data/.gitkeep
