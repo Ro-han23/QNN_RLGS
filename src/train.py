@@ -125,6 +125,54 @@ def train_qnn(qnn: RLGS_QNN,
     return qnn
 
 
+def qnn_train_for_restart(X_train, X_val, y_train, y_val, 
+                         n_qubits: int = 4, 
+                         n_layers: int = 2,
+                         batch_size: int = 5,
+                         latency_mode: str = 'low'):
+    """
+    Create a training function compatible with multi_restart_train.
+    
+    Returns a function that can be called with epochs, seed, and initial_params.
+    """
+    from .qoncord import RestartResult, set_seed
+    
+    def train_func(epochs: int, seed: int, initial_params=None):
+        """Training function for a single restart."""
+        # Set seed
+        set_seed(seed)
+        
+        # Initialize QNN
+        qnn = RLGS_QNN(n_qubits=n_qubits, n_layers=n_layers)
+        
+        # Use initial params if provided (for promoted training)
+        if initial_params is not None:
+            qnn.params = initial_params.copy()
+        
+        # Train
+        start_time = time.time()
+        qnn = train_qnn(qnn, X_train, y_train, X_val, y_val,
+                       epochs=epochs, batch_size=batch_size, 
+                       latency_mode=latency_mode)
+        training_time = time.time() - start_time
+        
+        # Get final metrics
+        val_loss = qnn.training_history['loss'][-1] if qnn.training_history['loss'] else float('inf')
+        val_accuracy = qnn.training_history['accuracy'][-1] if qnn.training_history['accuracy'] else 0.0
+        
+        # Return RestartResult
+        return RestartResult(
+            seed=seed,
+            params=qnn.params.copy(),
+            val_loss=val_loss,
+            val_accuracy=val_accuracy,
+            training_time=training_time,
+            training_history=qnn.training_history
+        )
+    
+    return train_func
+
+
 def compare_latency_modes(X_train, X_val, y_train, y_val, epochs: int = 10):
     """
     Compare training with high vs low latency modes (Qtenon-inspired).
