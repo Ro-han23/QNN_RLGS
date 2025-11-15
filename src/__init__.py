@@ -4,7 +4,7 @@ Optimizing QNN training using RLGS, Qtenon, Qoncord, and Q-Edge ideas.
 """
 
 from .model import RLGS_QNN, data_encoding, ansatz
-from .train import train_qnn, prepare_toy_dataset
+from .train import train_qnn, prepare_toy_dataset, qnode_call_with_latency, compare_latency_modes
 from .rlgs_utils import RLGSGraphStateSimplifier, remove_low_impact_edges
 from .qoncord import QoncordScheduler
 from .qedge_sim import QEdgeConstraints, QtenonLowLatencyLoop
@@ -25,6 +25,8 @@ __all__ = [
     'ansatz',
     'train_qnn',
     'prepare_toy_dataset',
+    'qnode_call_with_latency',
+    'compare_latency_modes',
     'RLGSGraphStateSimplifier',
     'remove_low_impact_edges',
     'QoncordScheduler',

@@ -4,9 +4,35 @@ Implements the main training procedure with all optimizations.
 """
 
 import numpy as np
-from typing import Tuple
+import time
+from typing import Tuple, Callable, Any
 from .model import RLGS_QNN
 from .datasets import prepare_dataset, prepare_toy_dataset
+
+
+def qnode_call_with_latency(qnode_func: Callable, params: np.ndarray, x: np.ndarray, latency: float) -> Any:
+    """
+    Call QNode with simulated classical↔quantum latency.
+    
+    Qtenon-inspired latency simulation: inserts time.sleep at each QNode call
+    to simulate communication delay between classical and quantum processors.
+    
+    Args:
+        qnode_func: The quantum node function to call
+        params: Circuit parameters
+        x: Input data
+        latency: Latency in seconds (e.g., 0.001 for 1ms, 0.0001 for 0.1ms)
+    
+    Returns:
+        Output from the QNode function
+    """
+    # Execute quantum circuit
+    out = qnode_func(params, x)
+    
+    # Simulate classical↔quantum communication latency
+    time.sleep(latency)
+    
+    return out
 
 
 def train_qnn(qnn: RLGS_QNN, 
@@ -15,13 +41,31 @@ def train_qnn(qnn: RLGS_QNN,
               X_val: np.ndarray, 
               y_val: np.ndarray,
               epochs: int = 50, 
-              batch_size: int = 5):
+              batch_size: int = 5,
+              latency_mode: str = 'low'):
     """
     Train the QNN with all RLGS-inspired features.
-    Includes latency simulation, restart scheduling, and constraint checking.
+    Includes Qtenon-inspired latency simulation, restart scheduling, and constraint checking.
+    
+    Args:
+        qnn: RLGS_QNN instance
+        X_train, y_train: Training data
+        X_val, y_val: Validation data
+        epochs: Number of training epochs
+        batch_size: Batch size for training
+        latency_mode: 'low' (0.1ms, Qtenon-style) or 'high' (1ms, standard)
     """
+    # Configure Qtenon-inspired latency simulation
+    latency_config = {
+        'low': 0.0001,   # 0.1 ms - Qtenon-style low latency
+        'high': 0.001    # 1 ms - standard latency
+    }
+    latency = latency_config.get(latency_mode, 0.0001)
+    qnn.low_latency_loop.latency_ms = latency * 1000  # Convert to ms for internal use
+    
     print(f"Training RLGS-QNN with {qnn.n_qubits} qubits, {qnn.n_layers} layers")
     print(f"RLGS graph simplification: {len(qnn.graph_simplifier.analyze_connectivity([(i, i+1) for i in range(qnn.n_qubits - 1)]))} CZ gates")
+    print(f"Qtenon latency mode: {latency_mode} ({latency*1000:.2f} ms)")
     
     for epoch in range(epochs):
         # Shuffle training data
@@ -81,6 +125,64 @@ def train_qnn(qnn: RLGS_QNN,
     return qnn
 
 
+def compare_latency_modes(X_train, X_val, y_train, y_val, epochs: int = 10):
+    """
+    Compare training with high vs low latency modes (Qtenon-inspired).
+    
+    Demonstrates the impact of classical↔quantum communication latency
+    on training time and performance.
+    """
+    print("\n" + "=" * 70)
+    print("Qtenon Latency Comparison: High (1ms) vs Low (0.1ms)")
+    print("=" * 70)
+    
+    results = {}
+    
+    for mode in ['high', 'low']:
+        print(f"\n{'='*70}")
+        print(f"Training with {mode.upper()} latency mode")
+        print(f"{'='*70}")
+        
+        # Initialize fresh QNN
+        qnn = RLGS_QNN(n_qubits=4, n_layers=2)
+        
+        # Train with specified latency mode
+        start_time = time.time()
+        qnn = train_qnn(qnn, X_train, y_train, X_val, y_val, 
+                       epochs=epochs, batch_size=5, latency_mode=mode)
+        training_time = time.time() - start_time
+        
+        # Store results
+        final_acc = qnn.training_history['accuracy'][-1]
+        avg_latency = qnn.low_latency_loop.get_average_latency()
+        
+        results[mode] = {
+            'training_time': training_time,
+            'final_accuracy': final_acc,
+            'avg_latency': avg_latency
+        }
+    
+    # Print comparison
+    print("\n" + "=" * 70)
+    print("Latency Mode Comparison Results")
+    print("=" * 70)
+    print(f"\nHigh Latency (1ms):")
+    print(f"  Training time: {results['high']['training_time']:.2f}s")
+    print(f"  Final accuracy: {results['high']['final_accuracy']:.2%}")
+    print(f"  Avg latency: {results['high']['avg_latency']:.4f} ms")
+    
+    print(f"\nLow Latency (0.1ms - Qtenon-style):")
+    print(f"  Training time: {results['low']['training_time']:.2f}s")
+    print(f"  Final accuracy: {results['low']['final_accuracy']:.2%}")
+    print(f"  Avg latency: {results['low']['avg_latency']:.4f} ms")
+    
+    speedup = results['high']['training_time'] / results['low']['training_time']
+    print(f"\n🚀 Speedup with Qtenon low-latency: {speedup:.2f}x faster")
+    print("=" * 70)
+    
+    return results
+
+
 def main():
     """
     Main training loop demonstrating all RLGS-inspired features.
@@ -96,17 +198,17 @@ def main():
     print("=" * 60)
     
     # Prepare dataset
-    print("\nPreparing toy classification dataset (Iris binary)...")
-    X_train, X_val, y_train, y_val = prepare_toy_dataset()
+    print("\nPreparing toy classification dataset (moons)...")
+    X_train, X_val, y_train, y_val = prepare_dataset('moons', n_samples=200)
     print(f"Training samples: {len(X_train)}, Validation samples: {len(X_val)}")
     
     # Initialize QNN
     print("\nInitializing RLGS-QNN...")
     qnn = RLGS_QNN(n_qubits=4, n_layers=2)
     
-    # Train
-    print("\nStarting training...")
-    qnn = train_qnn(qnn, X_train, y_train, X_val, y_val, epochs=30, batch_size=5)
+    # Train with low latency (Qtenon-style)
+    print("\nStarting training with Qtenon low-latency mode...")
+    qnn = train_qnn(qnn, X_train, y_train, X_val, y_val, epochs=30, batch_size=5, latency_mode='low')
     
     # Final evaluation
     print("\n" + "=" * 60)
