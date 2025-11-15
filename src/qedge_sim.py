@@ -1,11 +1,12 @@
 """
 Q-Edge-inspired edge-mode simulator.
 Simulates CPU/bandwidth constraints and enforces resource limits for edge deployment.
+Implements edge vs cloud modes with different resource constraints.
 """
 
 import time
 import numpy as np
-from typing import Dict
+from typing import Dict, Literal
 
 
 class QEdgeConstraints:
@@ -72,3 +73,66 @@ class QtenonLowLatencyLoop:
     def get_average_latency(self) -> float:
         """Returns average loop latency in milliseconds."""
         return np.mean(self.loop_times) if self.loop_times else 0.0
+
+
+class QEdgeSimulator:
+    """
+    Q-Edge simulator with edge vs cloud modes.
+    
+    Edge mode: smaller circuits, smaller batch size, limited compute
+    Cloud mode: full circuits, larger compute resources
+    """
+    
+    def __init__(self, mode: Literal['edge', 'cloud'] = 'cloud'):
+        self.mode = mode
+        
+        if mode == 'edge':
+            # Edge mode: constrained resources
+            self.max_batch_size = 4
+            self.cpu_slowdown = 0.002  # 2ms per operation
+            self.bandwidth_latency = 0.005  # 5ms for data transfer
+            self.use_reduced_graph = True
+            self.max_gates = 30
+            self.max_depth = 8
+        else:
+            # Cloud mode: more resources
+            self.max_batch_size = 16
+            self.cpu_slowdown = 0.0001  # 0.1ms per operation
+            self.bandwidth_latency = 0.0001  # 0.1ms for data transfer
+            self.use_reduced_graph = False
+            self.max_gates = 100
+            self.max_depth = 20
+        
+        self.inference_times = []
+    
+    def simulate_compute(self):
+        """Simulate CPU compute delay."""
+        time.sleep(self.cpu_slowdown)
+    
+    def simulate_transfer(self):
+        """Simulate data transfer latency."""
+        time.sleep(self.bandwidth_latency)
+    
+    def get_batch_size(self) -> int:
+        """Get max batch size for this mode."""
+        return self.max_batch_size
+    
+    def should_use_reduced_graph(self) -> bool:
+        """Whether to use reduced graph (RLGS simplified)."""
+        return self.use_reduced_graph
+    
+    def record_inference_time(self, time_ms: float):
+        """Record inference time for a sample."""
+        self.inference_times.append(time_ms)
+    
+    def get_average_inference_time(self) -> float:
+        """Get average inference time in ms."""
+        return np.mean(self.inference_times) if self.inference_times else 0.0
+    
+    def get_constraints(self) -> Dict[str, int]:
+        """Get resource constraints."""
+        return {
+            'max_gates': self.max_gates,
+            'max_depth': self.max_depth,
+            'max_batch_size': self.max_batch_size
+        }
