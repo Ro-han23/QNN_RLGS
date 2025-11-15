@@ -4,32 +4,9 @@ Implements the main training procedure with all optimizations.
 """
 
 import numpy as np
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from typing import Tuple
 from .model import RLGS_QNN
-
-
-def prepare_toy_dataset() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Prepare toy classification dataset (Iris binary classification).
-    """
-    # Load iris dataset
-    iris = load_iris()
-    X = iris.data[:100, :4]  # First 100 samples (2 classes)
-    y = iris.target[:100]    # Binary labels (0 and 1)
-    
-    # Standardize features
-    scaler = StandardScaler()
-    X = scaler.fit_transform(X)
-    
-    # Split dataset
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.3, random_state=42
-    )
-    
-    return X_train, X_val, y_train, y_val
+from .datasets import prepare_dataset, prepare_toy_dataset
 
 
 def train_qnn(qnn: RLGS_QNN, 
